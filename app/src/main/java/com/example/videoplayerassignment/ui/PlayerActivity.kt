@@ -1,15 +1,24 @@
 package com.example.videoplayerassignment.ui
 
+import android.content.pm.ActivityInfo
+import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
 import android.view.View
+import android.view.ViewGroup
+import android.widget.LinearLayout
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.example.videoplayerassignment.R
 import com.example.videoplayerassignment.data.model.VideoItem
 import com.example.videoplayerassignment.databinding.ActivityPlayerBinding
 import com.example.videoplayerassignment.ui.adapters.RelatedVideosAdapter
@@ -26,6 +35,8 @@ class PlayerActivity : AppCompatActivity() {
     private var currentPlaybackPosition: Long = 0L
     private var currentQualityLabel: String = "Auto"
     private var currentQualityUrl: String = ""
+
+    private var isFullscreen = false
 
     private lateinit var relatedVideosAdapter: RelatedVideosAdapter
 
@@ -49,12 +60,27 @@ class PlayerActivity : AppCompatActivity() {
         }
 
         setupUI()
+        setupOnBackPressed()
         loadVideoDetails(currentVideoItem!!)
     }
 
     private fun setupUI() {
         binding.btnBack.setOnClickListener {
-            finish()
+            if (isFullscreen) {
+                toggleFullscreen()
+            } else {
+                finish()
+            }
+        }
+
+        binding.btnFullscreen.setOnClickListener {
+            toggleFullscreen()
+        }
+
+        binding.playerView.setFullscreenButtonClickListener { isFull ->
+            if (isFull != isFullscreen) {
+                toggleFullscreen()
+            }
         }
 
         relatedVideosAdapter = RelatedVideosAdapter { videoItem ->
@@ -78,6 +104,78 @@ class PlayerActivity : AppCompatActivity() {
 
         binding.btnQuality.setOnClickListener {
             showQualitySelectionDialog()
+        }
+    }
+
+    private fun setupOnBackPressed() {
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (isFullscreen) {
+                    toggleFullscreen()
+                } else {
+                    finish()
+                }
+            }
+        })
+    }
+
+    private fun toggleFullscreen() {
+        if (!isFullscreen) {
+            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+            enterFullscreen()
+        } else {
+            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+            exitFullscreen()
+        }
+    }
+
+    private fun enterFullscreen() {
+        isFullscreen = true
+        binding.btnFullscreen.setImageResource(R.drawable.ic_fullscreen_exit)
+
+        val windowInsetsController = WindowCompat.getInsetsController(window, binding.root)
+        windowInsetsController.systemBarsBehavior =
+            WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        windowInsetsController.hide(WindowInsetsCompat.Type.systemBars())
+
+        binding.layoutPlayerContainer.layoutParams = LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.MATCH_PARENT
+        )
+
+        binding.root.findViewById<View>(R.id.rvRelatedVideos)?.parent?.let { parentView ->
+            if (parentView is View) {
+                parentView.visibility = View.GONE
+            }
+        }
+    }
+
+    private fun exitFullscreen() {
+        isFullscreen = false
+        binding.btnFullscreen.setImageResource(R.drawable.ic_fullscreen)
+
+        val windowInsetsController = WindowCompat.getInsetsController(window, binding.root)
+        windowInsetsController.show(WindowInsetsCompat.Type.systemBars())
+
+        val heightPx = (230 * resources.displayMetrics.density).toInt()
+        binding.layoutPlayerContainer.layoutParams = LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            heightPx
+        )
+
+        binding.root.findViewById<View>(R.id.rvRelatedVideos)?.parent?.let { parentView ->
+            if (parentView is View) {
+                parentView.visibility = View.VISIBLE
+            }
+        }
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        if (newConfig.orientation == Configuration.ORIENTATION_LANDSCAPE) {
+            if (!isFullscreen) enterFullscreen()
+        } else if (newConfig.orientation == Configuration.ORIENTATION_PORTRAIT) {
+            if (isFullscreen) exitFullscreen()
         }
     }
 

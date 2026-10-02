@@ -33,6 +33,18 @@
             android:padding="8dp"
             android:src="@drawable/ic_back_arrow" />
 
+        <ImageView
+            android:id="@+id/btnFullscreen"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_gravity="top|end"
+            android:layout_margin="12dp"
+            android:background="@drawable/bg_badge"
+            android:backgroundTint="@color/overlay_black_70"
+            android:contentDescription="Fullscreen"
+            android:padding="8dp"
+            android:src="@drawable/ic_fullscreen" />
+
     </FrameLayout>
 
     <androidx.core.widget.NestedScrollView
